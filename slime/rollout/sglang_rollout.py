@@ -80,7 +80,6 @@ class GenerateState(metaclass=SingletonMeta):
             no_stop_trim=True,
             spaces_between_special_tokens=False,
         )
-
         if getattr(args, "sglang_enable_deterministic_inference", False):
             sampling_seed_base = args.rollout_seed
             self.group_sampling_seeds = [sampling_seed_base + i for i in range(args.n_samples_per_prompt)]
@@ -413,8 +412,12 @@ async def generate_rollout_async(
 
             if do_print:
                 sample = group[0][0] if isinstance(group[0], list) else group[0]
+                prompt_res = str(sample.prompt) + str(sample.response)
+                reward_str = str(sample.reward)
+                if len(reward_str) > 200:
+                    reward_str = reward_str[:200] + "..."
                 logger.info(
-                    f"First rollout sample: {[str(sample.prompt) + sample.response]}, label: {str(sample.label)[:100]}, reward: {sample.reward}",
+                    f"First rollout sample: [{prompt_res[:1000]}...], label: {str(sample.label)[:100]}, reward: {reward_str}",
                 )
                 do_print = False
 
@@ -434,8 +437,12 @@ async def generate_rollout_async(
 
     pbar.close()
     sample = data[-1][0][0] if isinstance(data[-1][0], list) else data[-1][0]
+    prompt_res = str(sample.prompt) + str(sample.response)
+    reward_str = str(sample.reward)
+    if len(reward_str) > 200:
+        reward_str = reward_str[:200] + "..."
     logger.info(
-        f"Finish rollout: {[str(sample.prompt) + sample.response]}, label: {str(sample.label)[:100]}, reward: {sample.reward}",
+        f"Finish rollout: [{prompt_res[:1000]}...], label: {str(sample.label)[:100]}, reward: {reward_str}",
     )
 
     # there are still some unfinished requests, abort them
@@ -521,7 +528,6 @@ async def eval_rollout_single_dataset(
         no_stop_trim=True,
         spaces_between_special_tokens=False,
     )
-
     tasks = []
     # do multiple samples for eval prompts
     sample_index = 0
@@ -554,10 +560,14 @@ async def eval_rollout_single_dataset(
     for coro in asyncio.as_completed(tasks):
         sample = await coro
         if do_print:
+            prompt_res = str(sample.prompt) + str(sample.response)
+            reward_str = str(sample.reward)
+            if len(reward_str) > 200:
+                reward_str = reward_str[:200] + "..."
             logger.info(
                 "eval_rollout_single_dataset example data: "
-                f"{[str(sample.prompt) + sample.response]} "
-                f"reward={sample.reward}"
+                f"[{prompt_res[:1000]}...] "
+                f"reward={reward_str}"
             )
             do_print = False
         if isinstance(sample, list):

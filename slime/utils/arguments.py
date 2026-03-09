@@ -987,6 +987,24 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
                 ),
             )
             parser.add_argument(
+                "--opd-length-penalty-coef",
+                type=float,
+                default=0.00,
+                help="Length penalty coefficient per generated token in on-policy distillation.",
+            )
+            parser.add_argument(
+                "--opd-think-bonus-coef",
+                type=float,
+                default=0.00,
+                help="Reward bonus for the student when the teacher generates the thinking end token.",
+            )
+            parser.add_argument(
+                "--opd-think-token-id",
+                type=int,
+                default=-1,
+                help="The token ID for the thinking end token (e.g. </think>). Used with --opd-think-bonus-coef.",
+            )
+            parser.add_argument(
                 "--opd-kl-coef",
                 type=float,
                 default=1.0,

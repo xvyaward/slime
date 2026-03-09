@@ -383,14 +383,26 @@ def apply_opd_kl_to_advantages(
     teacher_log_probs = rollout_data.get("teacher_log_probs")
     if teacher_log_probs is None:
         raise ValueError(f"OPD with opd_type='{args.opd_type}' requires teacher_log_probs, but it is missing.")
+        
+    teacher_kl_weights = rollout_data.get("teacher_kl_weights")
 
     device = student_log_probs[0].device
     teacher_log_probs = [t.to(device=device) for t in teacher_log_probs]
+    
+    if teacher_kl_weights is not None:
+        teacher_kl_weights = [torch.tensor(w, dtype=torch.float32, device=device) for w in teacher_kl_weights]
+        rollout_data["teacher_kl_weights"] = teacher_kl_weights
 
     reverse_kls = []
     for i, adv in enumerate(advantages):
         reverse_kl = student_log_probs[i] - teacher_log_probs[i]
-        advantages[i] = adv - args.opd_kl_coef * reverse_kl
+        
+        if teacher_kl_weights is not None:
+            penalty = args.opd_kl_coef * teacher_kl_weights[i] * reverse_kl
+        else:
+            penalty = args.opd_kl_coef * reverse_kl
+            
+        advantages[i] = adv - penalty
         reverse_kls.append(reverse_kl)
 
     # Store reverse KL for logging
@@ -555,6 +567,15 @@ def compute_advantages_and_returns(args: Namespace, rollout_data: RolloutBatch) 
             )
             chunk_lengths = [chunk.size(0) for chunk in advantages]
             advantages = list(torch.split(whitened_advs_flat, chunk_lengths))
+
+    if getattr(args, "opd_length_penalty_coef", 0.0) > 0.0:
+        length_penalty_coef = args.opd_length_penalty_coef
+        for i, adv in enumerate(advantages):
+            advantages[i] = adv - length_penalty_coef * response_lengths[i]
+        rollout_data["applied_length_penalty"] = [
+            torch.full((response_lengths[i],), length_penalty_coef * response_lengths[i], dtype=torch.float32, device=advantages[0].device)
+            for i in range(len(advantages))
+        ]
 
     rollout_data["advantages"] = advantages
     rollout_data["returns"] = returns
