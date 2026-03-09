@@ -667,6 +667,9 @@ class RolloutManager:
         if samples[0].teacher_log_probs is not None:
             train_data["teacher_log_probs"] = [sample.teacher_log_probs for sample in samples]
 
+        if samples[0].teacher_kl_weights is not None:
+            train_data["teacher_kl_weights"] = [sample.teacher_kl_weights for sample in samples]
+
         return train_data
 
     def set_train_parallel_config(self, config: dict):
@@ -706,6 +709,7 @@ class RolloutManager:
                 "rollout_routed_experts",
                 "prompt",
                 "teacher_log_probs",
+                "teacher_kl_weights",
             ]:
                 if key not in data:
                     continue
