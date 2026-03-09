@@ -1,4 +1,5 @@
 from .deepseekv3 import convert_deepseekv3_to_hf
+from .exaone import convert_exaone_to_hf
 from .glm4 import convert_glm4_to_hf
 from .glm4moe import convert_glm4moe_to_hf
 from .gpt_oss import convert_gpt_oss_to_hf
@@ -56,6 +57,8 @@ def _convert_to_hf_core(args, model_name, name, param):
         converted_named_tensors = convert_llama_to_hf(args, name, param)
     elif "mimo" in model_name:
         converted_named_tensors = convert_mimo_to_hf(args, name, param)
+    elif "exaone" in model_name:
+        converted_named_tensors = convert_exaone_to_hf(args, name, param)
     else:
         raise ValueError(f"Unsupported model: {model_name}")
 
