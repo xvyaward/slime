@@ -1022,6 +1022,13 @@ def get_slime_extra_args_provider(add_custom_arguments=None):
             parser.add_argument(
                 "--opd-teacher-ckpt-step", type=int, default=None, help="The checkpoint step for OPD teacher model."
             )
+            parser.add_argument(
+                "--opd-teacher-prompt-replace",
+                type=str,
+                nargs=2,
+                default=None,
+                help="A pair of strings (target, replacement) to modify the student's prompt text before sending to the SGLang teacher during OPD.",
+            )
             return parser
 
         def add_router_arguments(parser):

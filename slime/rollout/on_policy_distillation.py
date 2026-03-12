@@ -1,13 +1,45 @@
 import aiohttp
+import logging
 import torch
 
 from slime.utils.types import Sample
 
+logger = logging.getLogger(__name__)
+
 
 async def reward_func(args, sample, **kwargs):
+    input_ids = sample.tokens
+
+    if getattr(args, "opd_teacher_prompt_replace", None) is not None:
+        target_str, replace_str = args.opd_teacher_prompt_replace
+        
+        # Cache tokenizer on args to avoid repeated loading
+        if not hasattr(args, "_cached_tokenizer"):
+            from transformers import AutoTokenizer
+            args._cached_tokenizer = AutoTokenizer.from_pretrained(args.hf_checkpoint, trust_remote_code=True)
+        tokenizer = args._cached_tokenizer
+        
+        # Separate prompt and response tokens
+        prompt_len = len(sample.tokens) - sample.response_length
+        prompt_tokens = sample.tokens[:prompt_len]
+        response_tokens = sample.tokens[prompt_len:]
+        
+        # Decode prompt, replace, and re-encode
+        prompt_text = tokenizer.decode(prompt_tokens)
+        new_prompt_text = prompt_text.replace(target_str, replace_str)
+        new_prompt_tokens = tokenizer.encode(new_prompt_text)
+
+        # Log modification once per batch or infrequently
+        if not hasattr(args, "_logged_opd_replacement"):
+             logger.info(f"\n[OPD Prompt Modification]\nOriginal: {prompt_text}\nModified: {new_prompt_text}\n")
+             args._logged_opd_replacement = True
+        
+        # Re-stitch
+        input_ids = new_prompt_tokens + response_tokens
+
     payload = {
         # "text": sample.prompt + sample.response,
-        "input_ids": sample.tokens,
+        "input_ids": input_ids,
         "sampling_params": {
             "temperature": 0,
             "max_new_tokens": 0,
